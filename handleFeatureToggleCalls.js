@@ -4,16 +4,9 @@ const rawSource = `
     let x = 0;
     let y = 0;
     // let z = 3;
-    
-    const x = 1 || FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 2;
-    if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT)) {
-        console.log('will be removed');
-    }
-    if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 1) {
-        console.log('will be removed');
-    }
-    if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) || 1) {
-        console.log('become 1');
+    const x = FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) || 1 && 2;
+    if(FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 1 && 2) {
+        console.log('this if is true');
     }
     console.log(x);
 `;
@@ -47,20 +40,30 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
         if(parent.value.type === 'VariableDeclarator') {
             parent.value.init = j.literal(result);
         } else if(parent.value.type === 'LogicalExpression') {
-            console.log('Logical Expressionn');
+            //console.log('Logical Expressionn');
             
             const operator = parent.value.operator;
             if(parent.value.right.loc.end.line === p.value.loc.end.line && parent.value.right.loc.end.column === p.value.loc.end.column) {
-                console.log('the call expression on the right of     the logical expression');
+                //console.log('the call expression on the right of     the logical expression');
                 if(operator === '||') {
                     if(!result) {
                         j(parent).replaceWith(parent.value.left);
                     } else {
                         if(parent.parentPath.value.type === 'IfStatement') {
+                            
                             const ifBody = parent.parentPath.value.consequent.body;
                             j(parent.parentPath).replaceWith(ifBody);
                         } else {
-                            j(parent).replaceWith(j.literal(true));
+                            while(parent.parentPath.value.type === 'LogicalExpression' && parent.parentPath.value.operator === '||') {
+                                parent = parent.parentPath;
+                            }
+                            
+                            if(parent.parentPath.value.type === 'IfStatement') {
+                                const ifBody = parent.parentPath.value.consequent.body;
+                                j(parent.parentPath).replaceWith(ifBody);
+                            } else {
+                                j(parent).replaceWith(j.literal(true));
+                            }
                         }
                     }
                 } else if(operator === '&&') {
@@ -84,10 +87,23 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
                             const ifBody = parent.parentPath.value.consequent.body;
                             j(parent.parentPath).replaceWith(ifBody);
                         } else {
-                            j(parent).replaceWith(j.literal(true));
+                            
+                            while(parent.parentPath.value.type === 'LogicalExpression' && parent.parentPath.value.operator === '||') {
+                                parent = parent.parentPath;
+                            }
+                            if(parent.parentPath.value.type === 'IfStatement') {
+                                const ifBody = parent.parentPath.value.consequent.body;
+                                j(parent.parentPath).replaceWith(ifBody);
+                            } else {
+                                //console.log(parent.value.right);
+                                //j(parent).replaceWith(j.literal(true));
+                                j(parent).replaceWith(parent.value.right);
+                            }
+                            
                         }
                     }
                 } else if(operator === '&&') {
+                    
                     if(result) {
                         j(parent).replaceWith(parent.value.right);
                     } else {
@@ -100,7 +116,7 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
                 }
             }
         } else if(parent.value.type === 'IfStatement') {
-            console.log('IfStatement');
+            //console.log('IfStatement');
             if(result) {
                 let ifBody = parent.value.consequent.body;
                 const trailingComments = parent.value.trailingComments;
