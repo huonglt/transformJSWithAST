@@ -1,14 +1,15 @@
 const j = require('jscodeshift');
 const assert = require("assert");
 const rawSource = `
-    let x = 0;
-    let y = 0;
-    // let z = 3;
-    const x = FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) || 1 && 2;
-    if(FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 1 && 2) {
-        console.log('this if is true');
+    const x =  y || 2 || !FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 3;
+    if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 1) {
+        console.log(1);
+    } else if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && 2) {
+        console.log(2);
+    } else {
+        console.log(3);
     }
-    console.log(x);
+    
 `;
 const astRoot = j(rawSource);
 
@@ -22,14 +23,77 @@ const createFeatureToggleCallExpression = (featureName) => {
     };
 };
 
+const leftOfLogicalExpression = (childNode, parentNode) => {
+    if(childNode.value.loc.start.line === parentNode.value.loc.start.line && childNode.value.loc.start.column === parentNode.value.loc.start.column) {
+        return true;
+    }
+    return false;
+}
+const handleLogicalExpression = (featureName, astRoot) => {
+    const featureToggleCalls = astRoot.find(j.CallExpression, createFeatureToggleCallExpression(featureName));
+    featureToggleCalls.forEach(p => {
+        let parent = p.parentPath;
+        let currentPath = p;
+        let operatorStr = '';
+        while(parent.value.type === 'UnaryExpression') {
+            operatorStr += parent.value.operator;
+            currentPath = parent;
+            parent = parent.parentPath;
+        }
+        
+        let result = true;
+        
+        if(operatorStr.length > 0) {
+            result = eval(operatorStr + result);
+        }
+        //let isOnLeft = leftOfLogicalExpression(currentPath, parent);
+        let lastResult = result;
+        j(currentPath).replaceWith(j.literal(result));
+        let canReplace = true;
+        while(parent.value.type === 'LogicalExpression' && canReplace) { 
+            let operator = parent.value.operator;
+            if(operator === '||') {
+                if(lastResult) {
+                    j(parent).replaceWith(j.literal(lastResult));
+                } else {
+                    if(parent.value.left.value === lastResult) {
+                        j(parent).replaceWith(parent.value.right);
+                        canReplace = false;
+                    } else {
+                        j(parent).replaceWith(parent.value.left);
+                        canReplace = false;
+                    }
+                }
+            } else if(operator === '&&') {
+                if(lastResult) {
+                    if(parent.value.left.value === lastResult) {
+                        j(parent).replaceWith(parent.value.right);
+                        canReplace = false;
+                    } else {
+                        j(parent).replaceWith(parent.value.left);
+                        canReplace = false;
+                    }
+                } else {
+                    j(parent).replaceWith(j.literal(lastResult));
+                }
+            }
+            parent = parent.parentPath;
+           
+        }
+        
+    })
+    return astRoot.toSource();
+};
 
 const handleFeatureToggleCalls = (featureName, astRoot) => {
     const featureToggleCalls = astRoot.find(j.CallExpression, createFeatureToggleCallExpression(featureName));
     featureToggleCalls.forEach(p => {
         let parent = p.parentPath;
         let operatorStr = '';
+        let currentPath = p;
         while(parent.value.type === 'UnaryExpression') {
             operatorStr += parent.value.operator;
+            currentPath = parent;
             parent = parent.parentPath;
         }
         
@@ -37,86 +101,79 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
         if(operatorStr.length > 0) {
             result = eval(operatorStr + result);
         }
+
         if(parent.value.type === 'VariableDeclarator') {
             parent.value.init = j.literal(result);
         } else if(parent.value.type === 'LogicalExpression') {
-            //console.log('Logical Expressionn');
             
-            const operator = parent.value.operator;
-            if(parent.value.right.loc.end.line === p.value.loc.end.line && parent.value.right.loc.end.column === p.value.loc.end.column) {
-                //console.log('the call expression on the right of     the logical expression');
+            let lastResult = result;
+            let canReplace = true;
+            j(currentPath).replaceWith(j.literal(result));
+            while(parent.value.type === 'LogicalExpression' && canReplace) { 
+                let operator = parent.value.operator;
                 if(operator === '||') {
-                    if(!result) {
-                        j(parent).replaceWith(parent.value.left);
+                    if(lastResult) {
+                        j(parent).replaceWith(j.literal(lastResult));
                     } else {
-                        if(parent.parentPath.value.type === 'IfStatement') {
-                            
-                            const ifBody = parent.parentPath.value.consequent.body;
-                            j(parent.parentPath).replaceWith(ifBody);
+                        if(parent.value.left.value === lastResult) {
+                            lastResult = parent.value.right;
+                            j(parent).replaceWith(parent.value.right);
+                            canReplace = false;
                         } else {
-                            while(parent.parentPath.value.type === 'LogicalExpression' && parent.parentPath.value.operator === '||') {
-                                parent = parent.parentPath;
-                            }
-                            
-                            if(parent.parentPath.value.type === 'IfStatement') {
-                                const ifBody = parent.parentPath.value.consequent.body;
-                                j(parent.parentPath).replaceWith(ifBody);
-                            } else {
-                                j(parent).replaceWith(j.literal(true));
-                            }
+                            lastResult = parent.value.left;
+                            j(parent).replaceWith(parent.value.left);
+                            canReplace = false;
                         }
                     }
                 } else if(operator === '&&') {
-                    if(result) {
-                        j(parent).replaceWith(parent.value.left);
-                    } else {
-                        if(parent.parentPath.value.type === 'IfStatement') {
-                            j(parent.parentPath).remove();
+                    if(lastResult) {
+                        if(parent.value.left.value === lastResult) {
+                            lastResult = parent.value.right;
+                            j(parent).replaceWith(parent.value.right);
+                            canReplace = false;
                         } else {
-                            j(parent).replaceWith(j.literal(false));
+                            lastResult = parent.value.left;
+                            j(parent).replaceWith(parent.value.left);
+                            canReplace = false;
                         }
+                    } else {
+                        j(parent).replaceWith(j.literal(lastResult));
                     }
                 }
-            } else if(parent.value.left.loc.end.line === p.value.loc.end.line && parent.value.left.loc.end.column === p.value.loc.end.column) {
-                console.log('the call expression on the left of the logical expression');
-                if(operator === '||') {
-                    if(!result) {
-                        j(parent).replaceWith(parent.value.right);
-                    } else {
-                        if(parent.parentPath.value.type === 'IfStatement') {
-                            const ifBody = parent.parentPath.value.consequent.body;
-                            j(parent.parentPath).replaceWith(ifBody);
-                        } else {
-                            
-                            while(parent.parentPath.value.type === 'LogicalExpression' && parent.parentPath.value.operator === '||') {
-                                parent = parent.parentPath;
-                            }
-                            if(parent.parentPath.value.type === 'IfStatement') {
-                                const ifBody = parent.parentPath.value.consequent.body;
-                                j(parent.parentPath).replaceWith(ifBody);
-                            } else {
-                                //console.log(parent.value.right);
-                                //j(parent).replaceWith(j.literal(true));
-                                j(parent).replaceWith(parent.value.right);
-                            }
-                            
-                        }
-                    }
-                } else if(operator === '&&') {
+                parent = parent.parentPath;
+            }
+            
+            while(parent.value.type === 'IfStatement') {
+                
+                if(lastResult === true) {
+                    let ifBody = parent.value.consequent.body;
+                    const trailingComments = parent.value.trailingComments;
+                    const comments = parent.value.comments;
                     
-                    if(result) {
-                        j(parent).replaceWith(parent.value.right);
+                    // attach comments to the ifBody Node
+                    ifBody[0].comments = comments;
+                    ifBody[0].trailingComments = trailingComments;
+                    
+                    j(parent).replaceWith(ifBody);
+                    
+                } else if(lastResult === false){
+                    if(parent.value.alternate) {
+                        
+                        j(parent).replaceWith(parent.value.alternate);
+                        //console.log(parent);
                     } else {
-                        if(parent.parentPath.value.type === 'IfStatement') {
-                            j(parent.parentPath).remove();
-                        } else {
-                            j(parent).replaceWith(j.literal(false));
-                        }
+                        
+                        j(parent).remove();
                     }
+                    
                 }
+                //parent = parent.parentPath;
+            }
+            if(parent.value.type === 'BlockStatement') {
+                j(parent).replaceWith(parent.value.body);
             }
         } else if(parent.value.type === 'IfStatement') {
-            //console.log('IfStatement');
+            
             if(result) {
                 let ifBody = parent.value.consequent.body;
                 const trailingComments = parent.value.trailingComments;
@@ -131,29 +188,12 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
                 j(parent).remove();
             }
         }
-        
-    });
+    })
     return astRoot.toSource();
 };
-
 const featureNameToRemove = 'TERM_ACCOUNT_DEPOSIT';
 
 const transformed = handleFeatureToggleCalls(featureNameToRemove, astRoot);
 
-const expectedSource = `
-    let x = 0;
-    let y = 0;
-    // let z = 3;
-    /*
-     * the if block will be removed when feature is cleaned up
-     */
-    x = 1;
-    y = 2;
-
-    if(!!true || y || 1) {
-        x = 1;
-    }
-    console.log(x);
-`;
 console.log(transformed);
 //assert.equal(transformed, expectedSource, '');
