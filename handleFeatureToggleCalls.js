@@ -88,38 +88,38 @@ const handleConditionalExpression = (path) => {
     }
 };
 
-const handleLogicalExpression = (path, evalutedValue) => {
+const handleLogicalExpression = (path, computedValue) => {
     let keepReplacing = true;
     
     while(path.value.type === 'LogicalExpression' && keepReplacing) { 
         let operator = path.value.operator;
         if(operator === '||') {
-            if(evalutedValue) {
-                j(path).replaceWith(j.literal(evalutedValue));
+            if(computedValue) {
+                j(path).replaceWith(j.literal(computedValue));
             } else {
-                if(path.value.left.value === evalutedValue) {
-                    evalutedValue = path.value.right;
+                if(path.value.left.value === computedValue) {
+                    computedValue = path.value.right;
                     j(path).replaceWith(path.value.right);
                     keepReplacing = false;
                 } else {
-                    evalutedValue = path.value.left;
+                    computedValue = path.value.left;
                     j(path).replaceWith(path.value.left);
                     keepReplacing = false;
                 }
             }
         } else if(operator === '&&') {
-            if(evalutedValue) {
-                if(path.value.left.value === evalutedValue) {
-                    evalutedValue = path.value.right;
+            if(computedValue) {
+                if(path.value.left.value === computedValue) {
+                    computedValue = path.value.right;
                     j(path).replaceWith(path.value.right);
                     keepReplacing = false;
                 } else {
-                    evalutedValue = path.value.left;
+                    computedValue = path.value.left;
                     j(path).replaceWith(path.value.left);
                     keepReplacing = false;
                 }
             } else {
-                j(path).replaceWith(j.literal(evalutedValue));
+                j(path).replaceWith(j.literal(computedValue));
             }
         }
         path = path.parentPath;
@@ -140,13 +140,13 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
             parent = parent.parentPath;
         }
         
-        let evalutedValue = true;
+        let computedValue = true;
         if(operatorStr.length > 0) {
-            evalutedValue = eval(operatorStr + evalutedValue);
+            computedValue = eval(operatorStr + computedValue);
         }
-        j(currentPath).replaceWith(j.literal(evalutedValue));
+        j(currentPath).replaceWith(j.literal(computedValue));
         if(parent.value.type === 'LogicalExpression') {
-            handleLogicalExpression(parent, evalutedValue);
+            handleLogicalExpression(parent, computedValue);
             if(parent.value.type === 'IfStatement') {
                 handleIfStatement(parent);
             } else if(parent.value.type === 'ConditionalExpression') {
