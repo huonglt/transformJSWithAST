@@ -60,12 +60,13 @@ const createFeatureToggleCallExpression = (featureName) => {
 };
 
 const handleIfStatement = (path) => {
-    if(path.value.test.value === true) {
+    const expressionValue = path.value.test.value;
+    if(expressionValue=== true) {
         // to avoid broken if when parentPath is another if
         if(path.parentPath.value.type !== 'IfStatement') {
            j(path).replaceWith(path.value.consequent.body);
         }
-    } else if(path.value.test.value === false) {
+    } else if(expressionValue === false) {
         if(path.value.alternate) {
             if(path.value.alternate.type === 'IfStatement') {
                 j(path).replaceWith(path.value.alternate);
@@ -79,9 +80,10 @@ const handleIfStatement = (path) => {
 };
 
 const handleConditionalExpression = (path) => {
-    if(path.value.test.value === true) {
+    const expressionValue = path.value.test.value;
+    if(expressionValue === true) {
         j(path).replaceWith(path.value.consequent);
-    } else if(path.value.test.value === false) {
+    } else if(expressionValue === false) {
         j(path).replaceWith(path.value.alternate);
     }
 };
