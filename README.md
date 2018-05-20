@@ -9,7 +9,7 @@ This tool is easy to use, and fast to run. Besides it helps my team to avoid ted
 
 By reading the syntax tree AST of the source files, I can make code changes precisely where it is required.
 
-I am using jscodeshift as a codemod runner, and jest as a unit test runner. jscodeshift, and jest both are tools built by facebook
+I am using jscodeshift as a codemod runner, and jest as a unit test runner. Both jscodeshift, and jest are tools built by facebook
 
 AST nodes that I am handling in this tool:
 *  IfStatement
