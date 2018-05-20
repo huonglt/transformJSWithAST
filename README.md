@@ -11,4 +11,14 @@ By reading the syntax tree AST of the source files, I can make code changes prec
 
 I am using jscodeshift as a codemod runner, and jest as a unit test runner
 
+AST nodes that I am handling in this tool:
+    - IfStatement
+    - BlockStatement
+    - VariableDeclarator
+    - LogicalExpression
+    - ConditionalExpression
+    - UnaryOperator
+    - ObjectProperty
+    - ObjectExpression
+
 
