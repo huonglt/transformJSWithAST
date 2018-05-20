@@ -7,6 +7,8 @@ When the team completes building a feature, and ready to be shipped, it will be 
 
 This tool is easy to use, and fast to run. Besides it helps my team to avoid tedious, repetitive, and error prone tasks.
 
+By reading the syntax tree AST of the source files, I can make code changes where it is required.
+
 I am using jscodeshift as a codemod runner, and jest as a unit test runner
 
 
