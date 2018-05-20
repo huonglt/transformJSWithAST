@@ -124,6 +124,7 @@ const handleLogicalExpression = (path, computedValue) => {
         }
         path = path.parentPath;
     }
+    return path;
 };
 
 const handleFeatureToggleCalls = (featureName, astRoot) => {
@@ -144,11 +145,13 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
             computedValue = eval(operatorStr + computedValue);
         }
         j(currentPath).replaceWith(j.literal(computedValue));
+        
         if(parent.value.type === 'LogicalExpression') {
-            handleLogicalExpression(parent, computedValue);
+            parent = handleLogicalExpression(parent, computedValue);
             if(parent.value.type === 'IfStatement') {
                 handleIfStatement(parent);
             } else if(parent.value.type === 'ConditionalExpression') {
+                
                 handleConditionalExpression(parent);
             }
         } else if(parent.value.type === 'IfStatement') {
@@ -159,9 +162,9 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
     });
     return astRoot.toSource();
 };
-/*
+
 const featureNameToRemove = 'TERM_ACCOUNT_DEPOSIT';
 
 const transformed = handleFeatureToggleCalls(featureNameToRemove, astRoot);
-console.log(transformed);*/
+console.log(transformed);
 exports.handleFeatureToggleCalls = handleFeatureToggleCalls;
