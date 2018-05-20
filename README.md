@@ -5,7 +5,7 @@ This is a NodeJs app I wrote to automatically managing feature toggling. It will
 A feature is toggled on under development and testing environments, but toggled off under production environment.
 When the team completes building a feature, could be 1 week or a few sprints, and ready to be shipped, it will be toggled on on all environments.
 
-This tool is easy to use, and fast to run. Besides it helps my team to avoid tedious, repetitive, and error prone tasks.
+This tool is easy to use, just a single command line, and fast to run. Besides it helps my team to avoid tedious, repetitive, and error prone tasks.
 
 By reading the syntax tree AST of the source files, I can make code changes precisely where it is required.
 
