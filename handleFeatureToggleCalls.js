@@ -1,54 +1,4 @@
 const j = require('jscodeshift');
-const assert = require("assert");
-
-const rawSource = `
-    const x = !FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) || 1;
-    const x = FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && a || b;
-    if(FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT)) {
-        console.log('feature on');
-    } else {
-        console.log('feature off');
-    }
-    if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && x) {
-        console.log('feature on');
-    } else {
-        console.log('feature off');
-    }
-    if(x) {
-        console.log(x);
-    } else if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT)) {
-        console.log('feature on');
-    }
-    
-    if(someExpression) {
-        if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && x) {
-            console.log('feature on');
-        } else {
-            console.log('feature off');
-        }
-        if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && x) {
-            console.log('feature on');
-        } else if(y) {
-            console.log('feature off');
-        }
-        if(y || !FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && x) {
-            console.log('feature on');
-        } else {
-            console.log('feature off');
-        }
-        if(x) {
-            console.log(x);
-        } else if(!FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && x) {
-            console.log('off');
-        }
-    }
-    const y = FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) ? true : false;
-    const y = (FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) || x) ? true : false;
-    const y = (FeatureToggle.isFeatureEnabled(FeatureToggle.TERM_ACCOUNT_DEPOSIT) && x) ? x : y;
-    console.log('end');
-`;
-const astRoot = j(rawSource);
-
 const createFeatureToggleCallExpression = (featureName) => {
     return { 
         callee: { 
@@ -162,9 +112,4 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
     });
     return astRoot.toSource();
 };
-
-const featureNameToRemove = 'TERM_ACCOUNT_DEPOSIT';
-
-const transformed = handleFeatureToggleCalls(featureNameToRemove, astRoot);
-console.log(transformed);
 exports.handleFeatureToggleCalls = handleFeatureToggleCalls;
