@@ -20,5 +20,6 @@ AST nodes that I am handling in this tool:
 *  UnaryExpression
 *  ObjectProperty
 *  ObjectExpression
+*  CallExpression
 
 
