@@ -17,7 +17,7 @@ AST nodes that I am handling in this tool:
 *  VariableDeclarator
 *  LogicalExpression
 *  ConditionalExpression
-*  UnaryOperator
+*  UnaryExpression
 *  ObjectProperty
 *  ObjectExpression
 
