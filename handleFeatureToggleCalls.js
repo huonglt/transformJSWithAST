@@ -139,7 +139,6 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
             currentPath = parent;
             parent = parent.parentPath;
         }
-        
         let computedValue = true;
         if(operatorStr.length > 0) {
             computedValue = eval(operatorStr + computedValue);
@@ -160,7 +159,9 @@ const handleFeatureToggleCalls = (featureName, astRoot) => {
     });
     return astRoot.toSource();
 };
+/*
 const featureNameToRemove = 'TERM_ACCOUNT_DEPOSIT';
 
 const transformed = handleFeatureToggleCalls(featureNameToRemove, astRoot);
-console.log(transformed);
+console.log(transformed);*/
+exports.handleFeatureToggleCalls = handleFeatureToggleCalls;
