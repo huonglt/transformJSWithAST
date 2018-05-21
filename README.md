@@ -21,5 +21,7 @@ AST nodes that I am handling in this tool:
 *  ObjectProperty
 *  ObjectExpression
 *  CallExpression
+*  ExpressionStatement
+*  ReturnStatement
 
 
